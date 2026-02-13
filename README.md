@@ -1,251 +1,204 @@
-# 🍯 AI Honeypot - Scam Defense System
+# 🍯 Shining Zenith — AI Honeypot V3
 
-An intelligent AI-powered honeypot system that can take over scam calls and keep scammers engaged while extracting intelligence for law enforcement.
+**An intelligent AI-powered honeypot that intercepts scam calls, keeps scammers engaged with natural-sounding voices, and extracts maximum intelligence — all for free.**
 
-## 🎯 Features
+## 🎯 What's New in V3
 
-- **🗣️ Voice Interface**: Uses Web Speech API for natural voice conversations
-- **🤖 AI Persona**: "Margaret", a 68-year-old retiree designed to keep scammers engaged
-- **🔍 Intelligence Extraction**: Automatically detects and logs:
-  - Bank account numbers
-  - UPI IDs
-  - Phishing links
-  - Phone numbers
-  - Suspicious keywords
-- **📊 Real-time Dashboard**: Live transcript and extracted data visualization
-- **🎨 Premium UI**: Modern dark theme with glassmorphism effects
+| Feature | V2 | V3 |
+|---|---|---|
+| AI Model | Llama 3.1 8B (small) | **Llama 3.3 70B** (9× smarter) |
+| Voice | Robotic browser speech | **Edge TTS neural voices** (natural) |
+| Personas | 2 (Margaret, Harold) | **4** (+Priya, Uncle Bob) |
+| Intel Extraction | Regex patterns only | **AI-powered + regex** |
+| Scam Classification | ❌ | **Auto-detects scam type** |
+| Escalation Strategy | ❌ | **Progressively extracts more info** |
+| Session History | ❌ | **Tracks all past sessions** |
+| Time Wasted Counter | ❌ | **Shows total scammer time wasted** |
+| Report Export | ❌ | **One-click report for authorities** |
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
-- A Groq API key (free - sign up at [console.groq.com](https://console.groq.com))
-- Chrome, Edge, or Safari browser (for Web Speech API support)
+- Node.js (v18+)
+- Groq API key (free — [console.groq.com](https://console.groq.com))
+- Chrome/Edge browser
 
 ### Installation
 
-1. **Get a Groq API Key**
-   - Go to [console.groq.com](https://console.groq.com)
-   - Sign up for a free account (no credit card required)
-   - Generate an API key from the dashboard
+```bash
+# Server
+cd server
+npm install
 
-2. **Install Server Dependencies**
-   ```bash
-   cd server
-   npm install
-   ```
+# Client
+cd ../client
+npm install
+```
 
-3. **Install Client Dependencies**
-   ```bash
-   cd ../client
-   npm install
-   ```
+### Configure
 
-4. **Configure Environment**
-   - Open `server/.env`
-   - Replace `your_groq_api_key_here` with your actual Groq API key:
-     ```
-     GROQ_API_KEY=gsk_your_actual_key_here
-     PORT=3001
-     ```
+Edit `server/.env`:
+```
+GROQ_API_KEY=gsk_your_key_here
+PORT=3001
+```
 
-### Running the Application
+### Run
 
-You need to run both the server and client:
-
-**Terminal 1 - Start the Server:**
+**Terminal 1** — Server:
 ```bash
 cd server
 npm start
 ```
 
-**Terminal 2 - Start the Client:**
+**Terminal 2** — Client:
 ```bash
 cd client
 npm run dev
 ```
 
-The application will open at `http://localhost:3000`
+Open `http://localhost:3000`
 
 ## 📱 How to Use
 
-### Basic Usage (Browser Testing)
+1. **Select a persona** — choose who the scammer will talk to
+2. Click **"Hand-off Call to AI"** — grant mic permissions
+3. **Put the scam call on speaker** near your computer
+4. Watch the AI engage the scammer while extracting intel
+5. Check the **intelligence panel** for extracted data
+6. Click **📋 Export** to copy a full report for authorities
+7. Click **📞 End** to save the session
 
-1. Open the application in your browser
-2. Click **"Hand-off Call to AI"** button
-3. Grant microphone permissions when prompted
-4. Start speaking - the AI will respond as "Margaret"
-5. Watch the intelligence panel for extracted data
+## 🎭 Four AI Personas
 
-### Phone Call Integration
+| Persona | Character | Strategy |
+|---|---|---|
+| 👵 **Margaret** | 68yo retired teacher, warm and trusting | Cooperative, asks for clarification |
+| 👴 **Harold** | 72yo retired engineer, skeptical | Makes them repeat everything |
+| 👩 **Priya** | 32yo confused smartphone user | Anxious, asks "is my money safe?" |
+| 🧔 **Uncle Bob** | 65yo chatty veteran | Goes on tangents, maximum time wasting |
 
-To use with actual phone calls, you have two options:
+## 🎯 Escalation Strategy
 
-#### Option 1: Phone Speaker Method (Simplest)
-1. When you get a scam call, click "Hand-off Call to AI"
-2. Put your phone on **speaker mode**
-3. Place your phone near your computer's microphone
-4. The AI will listen and respond through your computer speakers
-5. The scammer hears the AI responses through your phone
+The AI progressively extracts more details as the conversation grows:
 
-#### Option 2: Virtual Audio Cable (Advanced)
-For better audio quality, you can use virtual audio cable software:
-- **Windows**: VB-Audio Virtual Cable
-- **Mac**: BlackHole or Loopback
+| Time | Level | Behavior |
+|---|---|---|
+| 0-2 min | **Cooperative** | Follow scammer's lead, build trust |
+| 2-5 min | **Curious** | Ask for callback number, name, department |
+| 5-8 min | **Probing** | Request employee ID, badge number, branch |
+| 8+ min | **Bold** | Ask for supervisor, company registration, office address |
 
-This routes audio directly between devices without using speakers/microphone.
+## 🔍 Intelligence Extraction
 
-## 🧠 How It Works
+### AI-Powered (V3 New)
+Uses a second AI call to understand context and extract structured data — catches things regex misses.
 
-### The Persona
+### Regex Patterns (Fallback)
+- **Names** — caller identification
+- **Phone Numbers** — 10-digit patterns
+- **UPI IDs** — `id@provider` format
+- **Bank Accounts** — 9-18 digit sequences
+- **Bank Names** — SBI, HDFC, ICICI, etc.
+- **Organizations** — Microsoft, RBI, Cyber Police, etc.
+- **Employee IDs** — alphanumeric badge/staff IDs
+- **Case Numbers** — reference/ticket numbers
+- **URLs** — phishing links
+- **Amounts** — monetary values mentioned
+- **Suspicious Keywords** — urgent, refund, OTP, arrest, etc.
 
-Margaret is designed to:
-- Act confused but cooperative
-- Ask for clarification frequently
-- Make believable mistakes (writing things down wrong)
-- Go off-topic (cats, grandchildren)
-- Be slow and waste the scammer's time
-- Extract information without suspicion
+### Scam Type Classification
+Auto-detects: Tech Support, Bank/UPI Fraud, OTP/Refund, Investment, Government Impersonation, Courier, Lottery/Prize, Romance, Job, Insurance
 
-### Intelligence Extraction
-
-The system uses pattern matching to detect:
-- **UPI IDs**: `example@okaxis`, `9876543210@paytm`
-- **Bank Accounts**: 8-18 digit sequences
-- **Phone Numbers**: 10-digit patterns
-- **Links**: URLs and domain names
-- **Keywords**: refund, verify, urgent, etc.
-
-All extracted data is displayed in real-time on the dashboard.
-
-## 🔧 Technical Stack
+## 🔧 Tech Stack
 
 - **Frontend**: React + Vite
 - **Backend**: Node.js + Express
-- **AI**: Groq API (Llama 3.1 8B model)
-- **Voice**: Web Speech API (browser built-in)
-- **Styling**: Vanilla CSS with custom design system
+- **AI**: Groq API (Llama 3.3 70B Versatile) — free tier
+- **Voice**: Edge TTS (natural neural voices — free) + Web Speech API (listening)
+- **Styling**: Vanilla CSS with premium dark theme
 
 ## 📊 Project Structure
 
 ```
-honeypot-agent/
-├── client/                 # React frontend (web app)
+shining-zenith/
+├── client/                 # React frontend
 │   ├── src/
-│   │   ├── components/    # UI components
-│   │   │   └── ActiveCall.jsx
-│   │   ├── hooks/         # Custom React hooks
-│   │   │   └── useVoice.js
+│   │   ├── components/
+│   │   │   ├── ActiveCall.jsx    # Main UI with all V3 features
+│   │   │   └── ActiveCall.css    # Premium dark theme styles
+│   │   ├── hooks/
+│   │   │   └── useVoice.js       # Edge TTS + Speech Recognition
 │   │   └── App.jsx
 │   └── package.json
 │
-├── server/                # Node.js backend (web app)
-│   ├── index.js           # Express server
-│   ├── groqClient.js      # AI integration
-│   ├── .env               # Configuration
+├── server/
+│   ├── index.js              # Express + TTS + Sessions API
+│   ├── groqClient.js         # AI personas, escalation, extraction
+│   ├── .env                  # GROQ_API_KEY config
 │   └── package.json
 │
-└── extension/             # Chrome Browser Extension (add-on)
-    ├── manifest.json      # Manifest V3 config
-    ├── background.js      # Service worker (Groq API + intelligence)
-    ├── popup.html         # Extension popup UI
-    ├── popup.css          # Premium dark theme
-    ├── popup.js           # Voice + chat logic
-    ├── options.html       # API key settings page
-    ├── options.js         # Settings persistence
-    └── icons/             # Extension icons
+└── extension/                # Chrome Extension (standalone)
+    ├── manifest.json
+    ├── background.js         # Groq API + AI extraction
+    ├── popup.html/css/js     # Full V3 UI
+    ├── options.html/js       # API key settings
+    └── icons/
 ```
 
 ---
 
-## 🧩 Browser Extension (Add-on)
+## 🧩 Chrome Extension
 
-The AI Honeypot is also available as a **Chrome Browser Extension** — no server setup required! The extension runs entirely in your browser and calls the Groq API directly.
+Same V3 features, no server needed.
 
-### Why Use the Extension?
-
-- **Zero setup** — no Node.js, no `npm install`, no server to run
-- **Always available** — one click from your browser toolbar
-- **Portable** — works on any machine with Chrome
-- **Same features** — voice AI, intelligence extraction, premium UI
-
-### Extension Installation
-
-1. **Get a Groq API Key** (if you don't have one)
-   - Sign up at [console.groq.com](https://console.groq.com) (free, no credit card)
-   - Generate an API key from the dashboard
-
-2. **Load the Extension**
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable **Developer mode** (top-right toggle)
-   - Click **Load unpacked**
-   - Select the `extension/` folder from this repository
-
-3. **Configure Your API Key**
-   - Right-click the 🍯 extension icon in the toolbar
-   - Click **Options**
-   - Paste your Groq API key and click **Save**
-
-### Using the Extension
-
-1. Click the 🍯 honeypot icon in your browser toolbar
-2. Select a persona (Margaret or Harold)
-3. Click **"Hand-off Call to AI"**
-4. Grant microphone permissions when prompted
-5. The AI will listen, respond via voice, and extract intelligence in real-time
+### Install
+1. Get Groq API key at [console.groq.com](https://console.groq.com)
+2. Open `chrome://extensions/` → Enable **Developer mode**
+3. Click **Load unpacked** → Select `extension/` folder
+4. Right-click icon → **Options** → Paste API key → Save
 
 ### Extension vs Web App
 
 | Feature | Web App | Extension |
 |---|---|---|
-| Setup | `npm install` + run server | Load unpacked in Chrome |
-| Server required | ✅ Yes (Node.js) | ❌ No |
-| API key storage | `.env` file | Chrome sync storage |
-| UI | Full-page React app | Browser popup |
-| Voice | ✅ Web Speech API | ✅ Web Speech API |
-| Intelligence extraction | ✅ Full | ✅ Full |
-| Persona selection | ✅ Margaret/Harold | ✅ Margaret/Harold |
+| Setup | `npm install` + server | Load unpacked in Chrome |
+| Server required | ✅ Yes | ❌ No |
+| Voice quality | **Edge TTS (natural)** | Browser TTS |
+| AI Intelligence | ✅ AI + Regex | ✅ AI + Regex |
+| Session History | ✅ Server memory | ✅ Chrome storage |
+| Report Export | ✅ Clipboard | ✅ Clipboard |
+| Personas | 4 | 4 |
 
 ---
 
 ## ⚠️ Important Notes
 
-- **Legal**: Only use this to waste scammers' time. Do not use for legitimate calls.
-- **Privacy**: All conversations are stored in memory and cleared when you refresh.
-- **API Limits**: Free Groq tier gives 14,400 requests/day (more than enough for testing).
-- **Browser Compatibility**: Web Speech API works best in Chrome.
+- **Legal**: Only use on scam calls. Do not use for legitimate calls.
+- **Privacy**: Web app conversations cleared on refresh. Extension stores sessions in chrome.storage.
+- **API Limits**: Groq free tier: 14,400 requests/day — more than enough.
+- **Browser**: Best in Chrome (Web Speech API + extension support).
 
 ## 🛟 Troubleshooting
 
-### "Voice Not Supported" Error
-- Use Chrome, Edge, or Safari browser
-- Ensure you're accessing via `localhost` (not file://)
-
-### AI Not Responding
-- Check that the server is running (`npm start` in server folder)
-- Verify your Groq API key is correct in `server/.env`
-- Check browser console for errors
-
-### Microphone Not Working
-- Grant microphone permissions when browser prompts
-- Check browser settings → Privacy → Microphone
-- Ensure no other app is using the microphone
+| Issue | Solution |
+|---|---|
+| Voice not supported | Use Chrome/Edge. Access via `localhost`. |
+| AI not responding | Check server is running. Verify API key in `.env`. |
+| Mic not working | Grant permissions. Check no other app using mic. |
+| Edge TTS error | Falls back to browser TTS automatically. |
 
 ## 📝 Development
 
-To modify the AI persona, edit `server/groqClient.js` and update the `SYSTEM_PROMPT` variable.
-
-To change the UI theme, edit `client/src/index.css` CSS variables.
-
-## 🤝 Contributing
-
-This is a hackathon project. Feel free to fork and improve!
+- Modify personas: `server/groqClient.js` → `PERSONAS` object
+- Change UI theme: `client/src/index.css` → CSS variables
+- Add escalation behavior: `groqClient.js` → `ESCALATION_PROMPTS`
 
 ## 📄 License
 
-MIT License - Use responsibly.
+MIT License — Use responsibly.
 
 ---
 
-Built with ❤️ to fight scammers
+Built with ❤️ to fight scammers | **Shining Zenith V3**

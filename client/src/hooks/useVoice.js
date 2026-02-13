@@ -1,230 +1,198 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export function useVoice() {
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
-    const [isSupported, setIsSupported] = useState(false);
 
-    const recognitionRef = useRef(null);
-    const synthRef = useRef(null);
+    const recognition = useRef(null);
+    const audioRef = useRef(null);
+    const silenceTimer = useRef(null);
     const isListeningRef = useRef(false);
-    const isSpeakingRef = useRef(false);
 
-    useEffect(() => {
-        isListeningRef.current = isListening;
-    }, [isListening]);
-
-    useEffect(() => {
-        isSpeakingRef.current = isSpeaking;
-    }, [isSpeaking]);
-
+    // Initialize Speech Recognition
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const speechSynthesis = window.speechSynthesis;
-
-        if (SpeechRecognition && speechSynthesis) {
-            setIsSupported(true);
-            synthRef.current = speechSynthesis;
-            speechSynthesis.getVoices();
-
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-            recognition.maxAlternatives = 1;
-
-            recognition.onstart = () => {
-                console.log('🎤 Speech recognition started');
-            };
-
-            recognition.onresult = (event) => {
-                // CRITICAL: Ignore results while speaking
-                if (isSpeakingRef.current) {
-                    console.log('🔇 Ignoring input while speaking');
-                    return;
-                }
-
-                let interim = '';
-                let final = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const result = event.results[i];
-                    const text = result[0].transcript;
-
-                    if (result.isFinal) {
-                        final += text + ' ';
-                        console.log('✅ Final transcript:', text);
-                    } else {
-                        interim += text;
-                    }
-                }
-
-                if (final) {
-                    setTranscript(prev => prev + final);
-                }
-                setInterimTranscript(interim);
-            };
-
-            recognition.onerror = (event) => {
-                console.error('❌ Speech recognition error:', event.error);
-                if (event.error === 'no-speech' || event.error === 'aborted') {
-                    if (isListeningRef.current && !isSpeakingRef.current) {
-                        setTimeout(() => {
-                            try {
-                                recognition.start();
-                            } catch (e) { }
-                        }, 100);
-                    }
-                }
-            };
-
-            recognition.onend = () => {
-                console.log('🔇 Speech recognition ended');
-                if (isListeningRef.current && !isSpeakingRef.current) {
-                    setTimeout(() => {
-                        try {
-                            recognition.start();
-                        } catch (e) { }
-                    }, 100);
-                }
-            };
-
-            recognitionRef.current = recognition;
+        if (!SpeechRecognition) {
+            console.error('Speech Recognition not supported');
+            return;
         }
 
-        return () => {
-            if (recognitionRef.current) {
-                try { recognitionRef.current.stop(); } catch (e) { }
+        const recog = new SpeechRecognition();
+        recog.continuous = true;
+        recog.interimResults = true;
+        recog.lang = 'en-US';
+        recog.maxAlternatives = 1;
+
+        recog.onresult = (event) => {
+            let interim = '';
+            let final = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const text = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    final += text;
+                } else {
+                    interim += text;
+                }
             }
+
+            if (final) {
+                setTranscript(final.trim());
+                setInterimTranscript('');
+            } else {
+                setInterimTranscript(interim);
+            }
+
+            // Reset silence timer
+            clearTimeout(silenceTimer.current);
+            silenceTimer.current = setTimeout(() => {
+                if (interim && isListeningRef.current) {
+                    setTranscript(interim.trim());
+                    setInterimTranscript('');
+                }
+            }, 2000);
+        };
+
+        recog.onerror = (event) => {
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                console.error('Speech recognition error:', event.error);
+            }
+        };
+
+        recog.onend = () => {
+            if (isListeningRef.current) {
+                try { recog.start(); } catch (e) { /* already started */ }
+            }
+        };
+
+        recognition.current = recog;
+
+        return () => {
+            clearTimeout(silenceTimer.current);
+            try { recog.stop(); } catch (e) { /* not started */ }
         };
     }, []);
 
-    const pauseListening = useCallback(() => {
-        if (recognitionRef.current && isListeningRef.current) {
-            try {
-                recognitionRef.current.stop();
-                console.log('⏸️ Paused listening');
-            } catch (e) { }
-        }
-    }, []);
-
-    const resumeListening = useCallback(() => {
-        if (recognitionRef.current && isListeningRef.current && !isSpeakingRef.current) {
-            // Clear output buffers before resuming
-            setInterimTranscript('');
-
-            try {
-                recognitionRef.current.start();
-                console.log('▶️ Resumed listening');
-            } catch (e) {
-                if (!e.message?.includes('already started')) {
-                    console.log('Could not resume:', e);
-                }
-            }
-        }
-    }, []);
-
-    const clearTranscript = useCallback(() => {
+    const startListening = useCallback(() => {
+        if (!recognition.current) return;
         setTranscript('');
         setInterimTranscript('');
-    }, []);
-
-    const stopSpeaking = useCallback(() => {
-        if (synthRef.current) {
-            synthRef.current.cancel();
-            setIsSpeaking(false);
-            isSpeakingRef.current = false;
-
-            // Clear any buffered input that might have been captured
-            setInterimTranscript('');
-
-            // Resume listening
-            resumeListening();
-        }
-    }, [resumeListening]);
-
-    const speak = useCallback((text, onEnd, persona = 'grandma') => {
-        if (synthRef.current) {
-            synthRef.current.cancel();
-            pauseListening();
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-
-            const voices = synthRef.current.getVoices();
-
-            if (persona === 'grandpa') {
-                utterance.rate = 0.85;
-                utterance.pitch = 0.8;
-                const maleVoice = voices.find(voice =>
-                    voice.name.includes('Male') || voice.name.includes('David') ||
-                    voice.name.includes('Mark') || voice.name.includes('Daniel')
-                );
-                if (maleVoice) utterance.voice = maleVoice;
-            } else {
-                utterance.rate = 0.9;
-                utterance.pitch = 1.1;
-                const femaleVoice = voices.find(voice =>
-                    voice.name.includes('Female') || voice.name.includes('Samantha') ||
-                    voice.name.includes('Zira') || voice.name.includes('Susan')
-                );
-                if (femaleVoice) utterance.voice = femaleVoice;
-            }
-
-            utterance.onstart = () => {
-                setIsSpeaking(true);
-                isSpeakingRef.current = true;
-            };
-
-            utterance.onend = () => {
-                setIsSpeaking(false);
-                isSpeakingRef.current = false;
-                setTimeout(() => {
-                    resumeListening();
-                    if (onEnd) onEnd();
-                }, 300);
-            };
-
-            utterance.onerror = () => {
-                setIsSpeaking(false);
-                isSpeakingRef.current = false;
-                resumeListening();
-            };
-
-            synthRef.current.speak(utterance);
-        }
-    }, [pauseListening, resumeListening]);
-
-    const startListening = useCallback(() => {
-        if (recognitionRef.current && !isListeningRef.current) {
-            setTranscript('');
-            setInterimTranscript('');
-            isListeningRef.current = true;
-            setIsListening(true);
-            try { recognitionRef.current.start(); } catch (e) { }
-        }
+        isListeningRef.current = true;
+        setIsListening(true);
+        try { recognition.current.start(); } catch (e) { /* restart */ }
     }, []);
 
     const stopListening = useCallback(() => {
         isListeningRef.current = false;
         setIsListening(false);
-        if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (e) { }
+        clearTimeout(silenceTimer.current);
+        try { recognition.current?.stop(); } catch (e) { /* not started */ }
+    }, []);
+
+    const pauseListening = useCallback(() => {
+        try { recognition.current?.stop(); } catch (e) { /* not started */ }
+    }, []);
+
+    const resumeListening = useCallback(() => {
+        if (isListeningRef.current) {
+            try { recognition.current?.start(); } catch (e) { /* already started */ }
         }
     }, []);
 
+    // ===== EDGE TTS PLAYBACK =====
+    const speak = useCallback(async (text, voice = 'en-US-JennyNeural') => {
+        if (!text) return;
+
+        // Stop any current audio
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+
+        // Pause mic while speaking (avoid feedback)
+        pauseListening();
+        setIsSpeaking(true);
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, voice })
+            });
+
+            if (!response.ok) throw new Error('TTS request failed');
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audioRef.current = audio;
+
+            audio.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+                audioRef.current = null;
+                // Resume listening after speech ends
+                setTimeout(() => resumeListening(), 300);
+            };
+
+            audio.onerror = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+                audioRef.current = null;
+                resumeListening();
+            };
+
+            await audio.play();
+        } catch (error) {
+            console.error('Edge TTS error:', error);
+            setIsSpeaking(false);
+            resumeListening();
+
+            // Fallback to browser TTS if Edge TTS fails
+            fallbackSpeak(text);
+        }
+    }, [pauseListening, resumeListening]);
+
+    // Browser TTS fallback
+    const fallbackSpeak = useCallback((text) => {
+        if (!window.speechSynthesis) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+
+        utterance.onend = () => {
+            setIsSpeaking(false);
+            setTimeout(() => resumeListening(), 300);
+        };
+
+        setIsSpeaking(true);
+        pauseListening();
+        window.speechSynthesis.speak(utterance);
+    }, [pauseListening, resumeListening]);
+
+    // Stop speaking
+    const stopSpeaking = useCallback(() => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+        resumeListening();
+    }, [resumeListening]);
+
     return {
-        isSupported,
         isListening,
         isSpeaking,
         transcript,
         interimTranscript,
         startListening,
         stopListening,
-        clearTranscript,
         speak,
-        stopSpeaking
+        stopSpeaking,
+        isSupported: !!(window.SpeechRecognition || window.webkitSpeechRecognition)
     };
 }
