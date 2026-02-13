@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=420">
+  <title>AI Honeypot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="call-header">
+      <div class="header-content">
+        <h1>🍯 AI Honeypot</h1>
+        <p class="subtitle">Scam Defense System</p>
+      </div>
+      <div class="status-indicator" id="statusIndicator" style="display:none;">
+        <span class="pulse-dot"></span>
+        <span>Active</span>
+      </div>
+    </header>
+
+    <!-- API Key Warning -->
+    <div class="api-warning" id="apiWarning" style="display:none;">
+      <p>⚠️ No API key configured. <a href="#" id="openOptionsLink">Open Options</a> to set your Groq API key.</p>
+    </div>
+
+    <div class="main-content">
+      <!-- Call Section -->
+      <div class="call-section">
+        <!-- Persona Selector -->
+        <div class="persona-selector" id="personaSelector">
+          <h3>Select Persona</h3>
+          <div class="persona-options">
+            <button class="persona-option selected" data-persona="grandma">
+              <span class="persona-emoji">👵</span>
+              <span class="persona-name">Margaret</span>
+              <span class="persona-age">68 y/o</span>
+              <span class="persona-role">Retired Teacher</span>
+            </button>
+            <button class="persona-option" data-persona="grandpa">
+              <span class="persona-emoji">👴</span>
+              <span class="persona-name">Harold</span>
+              <span class="persona-age">72 y/o</span>
+              <span class="persona-role">Retired Engineer</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Persona Card -->
+        <div class="persona-card">
+          <div class="avatar" id="personaAvatar">👵</div>
+          <h2 id="personaNameDisplay">Margaret</h2>
+          <p class="persona-desc" id="personaDescDisplay">68 years old · Retired Teacher</p>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+          <button class="start-btn" id="startBtn">
+            <span class="btn-icon">📞</span>
+            <span>Hand-off Call to AI</span>
+          </button>
+          <button class="stop-btn" id="stopBtn" style="display:none;">
+            <span class="btn-icon">🛑</span>
+            <span>End Call</span>
+          </button>
+          <button class="interrupt-btn" id="interruptBtn" style="display:none;">
+            <span class="btn-icon">⏭️</span>
+            <span>Skip / Interrupt</span>
+          </button>
+        </div>
+
+        <!-- Voice Status -->
+        <div class="voice-status" id="voiceStatus" style="display:none;">
+          <div class="voice-indicator" id="voiceIndicator">
+            <div class="wave-container">
+              <div class="wave"></div>
+              <div class="wave"></div>
+              <div class="wave"></div>
+            </div>
+          </div>
+          <p class="status-text" id="statusText">⏸️ Idle</p>
+          <div class="live-transcript" id="liveTranscript" style="display:none;">
+            <span class="live-label">Hearing:</span>
+            <span id="liveTranscriptText"></span>
+          </div>
+        </div>
+
+        <!-- Transcript -->
+        <div class="transcript-box">
+          <h3>📝 Live Transcript</h3>
+          <div class="messages" id="messagesContainer"></div>
+        </div>
+      </div>
+
+      <!-- Intelligence Panel -->
+      <div class="intel-section">
+        <div class="intel-card captured-info">
+          <h2>🎯 Information Captured</h2>
+          <div id="capturedGrid" class="captured-grid">
+            <p class="empty-state">No scammer information captured yet. Keep them talking!</p>
+          </div>
+        </div>
+
+        <div class="intel-card">
+          <h3>⚠️ Suspicious Keywords Detected</h3>
+          <div class="intel-tags" id="keywordTags">
+            <p class="empty-state">No keywords detected yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

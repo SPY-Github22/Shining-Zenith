@@ -131,7 +131,7 @@ All extracted data is displayed in real-time on the dashboard.
 
 ```
 honeypot-agent/
-├── client/                 # React frontend
+├── client/                 # React frontend (web app)
 │   ├── src/
 │   │   ├── components/    # UI components
 │   │   │   └── ActiveCall.jsx
@@ -140,12 +140,74 @@ honeypot-agent/
 │   │   └── App.jsx
 │   └── package.json
 │
-└── server/                # Node.js backend
-    ├── index.js           # Express server
-    ├── groqClient.js      # AI integration
-    ├── .env               # Configuration
-    └── package.json
+├── server/                # Node.js backend (web app)
+│   ├── index.js           # Express server
+│   ├── groqClient.js      # AI integration
+│   ├── .env               # Configuration
+│   └── package.json
+│
+└── extension/             # Chrome Browser Extension (add-on)
+    ├── manifest.json      # Manifest V3 config
+    ├── background.js      # Service worker (Groq API + intelligence)
+    ├── popup.html         # Extension popup UI
+    ├── popup.css          # Premium dark theme
+    ├── popup.js           # Voice + chat logic
+    ├── options.html       # API key settings page
+    ├── options.js         # Settings persistence
+    └── icons/             # Extension icons
 ```
+
+---
+
+## 🧩 Browser Extension (Add-on)
+
+The AI Honeypot is also available as a **Chrome Browser Extension** — no server setup required! The extension runs entirely in your browser and calls the Groq API directly.
+
+### Why Use the Extension?
+
+- **Zero setup** — no Node.js, no `npm install`, no server to run
+- **Always available** — one click from your browser toolbar
+- **Portable** — works on any machine with Chrome
+- **Same features** — voice AI, intelligence extraction, premium UI
+
+### Extension Installation
+
+1. **Get a Groq API Key** (if you don't have one)
+   - Sign up at [console.groq.com](https://console.groq.com) (free, no credit card)
+   - Generate an API key from the dashboard
+
+2. **Load the Extension**
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable **Developer mode** (top-right toggle)
+   - Click **Load unpacked**
+   - Select the `extension/` folder from this repository
+
+3. **Configure Your API Key**
+   - Right-click the 🍯 extension icon in the toolbar
+   - Click **Options**
+   - Paste your Groq API key and click **Save**
+
+### Using the Extension
+
+1. Click the 🍯 honeypot icon in your browser toolbar
+2. Select a persona (Margaret or Harold)
+3. Click **"Hand-off Call to AI"**
+4. Grant microphone permissions when prompted
+5. The AI will listen, respond via voice, and extract intelligence in real-time
+
+### Extension vs Web App
+
+| Feature | Web App | Extension |
+|---|---|---|
+| Setup | `npm install` + run server | Load unpacked in Chrome |
+| Server required | ✅ Yes (Node.js) | ❌ No |
+| API key storage | `.env` file | Chrome sync storage |
+| UI | Full-page React app | Browser popup |
+| Voice | ✅ Web Speech API | ✅ Web Speech API |
+| Intelligence extraction | ✅ Full | ✅ Full |
+| Persona selection | ✅ Margaret/Harold | ✅ Margaret/Harold |
+
+---
 
 ## ⚠️ Important Notes
 
