@@ -227,11 +227,199 @@ async function classifyScamType(apiKey, messages) {
   return data.choices?.[0]?.message?.content?.trim() || 'Unknown';
 }
 
-// ===== EDGE TTS (via service worker fetch) =====
+// ===== EDGE TTS (WebSocket-based, self-contained) =====
+const EDGE_TTS_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+const EDGE_TTS_WSS = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1';
+const EDGE_TTS_CHROMIUM_VER = '130.0.2849.68';
+
+function edgeTtsConnectId() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  arr[6] = (arr[6] & 0x0f) | 0x40;
+  arr[8] = (arr[8] & 0x3f) | 0x80;
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function edgeTtsTimestamp() {
+  return new Date().toUTCString().replace('GMT', 'GMT+0000 (Coordinated Universal Time)');
+}
+
+function edgeTtsEscapeXml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+async function edgeTtsSecMsGec() {
+  const WIN_EPOCH = 11644473600;
+  let ticks = Date.now() / 1000;
+  ticks += WIN_EPOCH;
+  ticks -= ticks % 300;
+  ticks *= 1e9 / 100;
+  const strToHash = `${ticks.toFixed(0)}${EDGE_TTS_TOKEN}`;
+  const data = new TextEncoder().encode(strToHash);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer), b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+function edgeTtsVoiceFullName(shortName) {
+  const match = /^([a-z]{2,})-([A-Z]{2,})-(.+Neural)$/.exec(shortName);
+  if (match) {
+    let [, lang, region, name] = match;
+    if (name.includes('-')) {
+      const parts = name.split('-');
+      region += `-${parts[0]}`;
+      name = parts[1];
+    }
+    return `Microsoft Server Speech Text to Speech Voice (${lang}-${region}, ${name})`;
+  }
+  return shortName;
+}
+
+// Track Edge TTS availability — cache failures to avoid delays
+let edgeTtsLastFailedAt = 0;
+const EDGE_TTS_RETRY_COOLDOWN = 60000; // Retry Edge TTS after 60 seconds
+
 async function handleTTS({ text, voice }) {
-  // For the extension, we'll return a flag telling popup to use browser TTS
-  // since Edge TTS WebSocket needs a more complex setup in service workers
-  return { useBrowserTTS: true, text, voice };
+  if (!text) return { error: 'No text provided' };
+
+  // If Edge TTS failed recently, skip immediately (zero delay)
+  if (edgeTtsLastFailedAt && (Date.now() - edgeTtsLastFailedAt < EDGE_TTS_RETRY_COOLDOWN)) {
+    return { useBrowserTTS: true, text, voice };
+  }
+
+  const fullVoice = edgeTtsVoiceFullName(voice || 'en-US-JennyNeural');
+  const rate = '-5%';
+  const pitch = '+0Hz';
+  const volume = '+0%';
+
+  const secMsGec = await edgeTtsSecMsGec();
+  const connId = edgeTtsConnectId();
+  const url = `${EDGE_TTS_WSS}?TrustedClientToken=${EDGE_TTS_TOKEN}&ConnectionId=${connId}&Sec-MS-GEC=${secMsGec}&Sec-MS-GEC-Version=1-${EDGE_TTS_CHROMIUM_VER}`;
+
+  return new Promise((resolve) => {
+    const audioChunks = [];
+    let resolved = false;
+
+    const safeResolve = (result) => {
+      if (!resolved) {
+        resolved = true;
+        resolve(result);
+      }
+    };
+
+    const markFailed = () => {
+      edgeTtsLastFailedAt = Date.now();
+      safeResolve({ useBrowserTTS: true, text, voice });
+    };
+
+    // Timeout after 4 seconds (fast failure detection)
+    const timeout = setTimeout(() => {
+      try { ws.close(); } catch (e) { }
+      markFailed();
+    }, 4000);
+
+    let ws;
+    try {
+      ws = new WebSocket(url);
+    } catch (e) {
+      clearTimeout(timeout);
+      markFailed();
+      return;
+    }
+
+    ws.onopen = () => {
+      // Send speech config
+      ws.send(
+        `X-Timestamp:${edgeTtsTimestamp()}\r\n` +
+        `Content-Type:application/json; charset=utf-8\r\n` +
+        `Path:speech.config\r\n\r\n` +
+        `{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`
+      );
+
+      // Send SSML
+      const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>` +
+        `<voice name='${fullVoice}'>` +
+        `<prosody pitch='${pitch}' rate='${rate}' volume='${volume}'>` +
+        `${edgeTtsEscapeXml(text)}` +
+        `</prosody></voice></speak>`;
+
+      ws.send(
+        `X-RequestId:${edgeTtsConnectId()}\r\n` +
+        `Content-Type:application/ssml+xml\r\n` +
+        `X-Timestamp:${edgeTtsTimestamp()}Z\r\n` +
+        `Path:ssml\r\n\r\n` +
+        ssml
+      );
+    };
+
+    ws.onmessage = async (event) => {
+      const data = event.data;
+
+      if (typeof data === 'string') {
+        // Check for turn.end
+        if (data.includes('Path:turn.end')) {
+          ws.close();
+        }
+      } else {
+        // Binary data — could be Blob or ArrayBuffer
+        let arrayBuffer;
+        if (data instanceof Blob) {
+          arrayBuffer = await data.arrayBuffer();
+        } else if (data instanceof ArrayBuffer) {
+          arrayBuffer = data;
+        } else {
+          return;
+        }
+
+        const bytes = new Uint8Array(arrayBuffer);
+        if (bytes.length < 2) return;
+
+        const headerLength = (bytes[0] << 8) | bytes[1];
+        if (arrayBuffer.byteLength > headerLength + 2) {
+          const audioData = bytes.slice(headerLength + 2);
+          if (audioData.length > 0) {
+            audioChunks.push(audioData);
+          }
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      clearTimeout(timeout);
+      if (audioChunks.length > 0) {
+        // Success — clear failure cache
+        edgeTtsLastFailedAt = 0;
+
+        // Combine chunks and convert to base64
+        const totalLength = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const combined = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of audioChunks) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+
+        // Convert to base64 in chunks to avoid call stack issues
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < combined.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, combined.slice(i, i + chunkSize));
+        }
+        const base64Audio = btoa(binary);
+
+        safeResolve({ audio: base64Audio, contentType: 'audio/mpeg' });
+      } else {
+        // No audio received, fallback
+        markFailed();
+      }
+    };
+
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      try { ws.close(); } catch (e) { }
+      markFailed();
+    };
+  });
 }
 
 // ===== MERGE INTELLIGENCE =====

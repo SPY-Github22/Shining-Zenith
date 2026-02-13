@@ -15,10 +15,19 @@ let state = {
     totalTimeWasted: 0
 };
 
+// Persona voice mapping for Edge TTS
+const PERSONA_VOICES = {
+    grandma: 'en-US-JennyNeural',
+    grandpa: 'en-US-GuyNeural',
+    priya: 'en-IN-NeerjaNeural',
+    uncle_bob: 'en-US-RogerNeural'
+};
+
 let recognition = null;
 let timerInterval = null;
 let isListeningRef = false;
 let processingRef = false;
+let currentAudio = null; // For Edge TTS audio playback
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -199,6 +208,11 @@ function startHoneypot() {
 
 function endHoneypot() {
     stopListening();
+    // Stop any active audio (Edge TTS or browser TTS)
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
     window.speechSynthesis?.cancel();
     clearInterval(timerInterval);
     state.isActive = false;
@@ -239,6 +253,12 @@ function endHoneypot() {
 }
 
 function skipSpeech() {
+    // Stop Edge TTS audio
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    // Stop browser TTS fallback
     window.speechSynthesis?.cancel();
     resumeListening();
     updateVoiceStatus('listening');
@@ -294,27 +314,83 @@ async function processTranscript(text) {
     processingRef = false;
 }
 
-// ===== TTS (Browser-based for extension) =====
+// ===== TTS (Edge TTS via background, with browser TTS fallback) =====
 function speakText(text) {
-    if (!text || !window.speechSynthesis) return;
+    if (!text) return;
 
     pauseListening();
     updateVoiceStatus('speaking');
+
+    const voice = PERSONA_VOICES[state.selectedPersona] || 'en-US-JennyNeural';
+
+    // Request Edge TTS from background service worker
+    chrome.runtime.sendMessage({ type: 'TTS', text, voice }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.warn('TTS message error:', chrome.runtime.lastError.message);
+            fallbackBrowserTTS(text);
+            return;
+        }
+
+        if (response?.audio) {
+            // Play Edge TTS audio (base64 MP3)
+            try {
+                const binary = atob(response.audio);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: response.contentType || 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                currentAudio = audio;
+
+                audio.onended = () => {
+                    URL.revokeObjectURL(url);
+                    currentAudio = null;
+                    updateVoiceStatus('listening');
+                    setTimeout(() => resumeListening(), 300);
+                };
+
+                audio.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    currentAudio = null;
+                    console.warn('Edge TTS audio playback failed, using browser TTS');
+                    fallbackBrowserTTS(text);
+                };
+
+                audio.play().catch(() => {
+                    URL.revokeObjectURL(url);
+                    currentAudio = null;
+                    fallbackBrowserTTS(text);
+                });
+            } catch (e) {
+                console.warn('Edge TTS decode error, using browser TTS:', e);
+                fallbackBrowserTTS(text);
+            }
+        } else {
+            // Background said to use browser TTS (Edge TTS unavailable)
+            fallbackBrowserTTS(text);
+        }
+    });
+}
+
+// Browser TTS fallback
+function fallbackBrowserTTS(text) {
+    if (!window.speechSynthesis) {
+        updateVoiceStatus('listening');
+        setTimeout(() => resumeListening(), 300);
+        return;
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
 
-    // Try to pick a voice
+    // Try to pick a matching voice
     const voices = window.speechSynthesis.getVoices();
-    const persona = state.personas.find(p => p.id === state.selectedPersona);
-    if (persona) {
-        const preferred = state.selectedPersona === 'priya' ? 'female' :
-            state.selectedPersona === 'grandma' ? 'female' : 'male';
-        const voice = voices.find(v => v.lang.startsWith('en') &&
-            v.name.toLowerCase().includes(preferred));
-        if (voice) utterance.voice = voice;
-    }
+    const preferred = (state.selectedPersona === 'priya' || state.selectedPersona === 'grandma') ? 'female' : 'male';
+    const match = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes(preferred));
+    if (match) utterance.voice = match;
 
     utterance.onend = () => {
         updateVoiceStatus('listening');
