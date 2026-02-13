@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "AI Honeypot - Scam Defense",
-    "version": "1.0.1",
+    "version": "3.0.0",
     "description": "An AI-powered honeypot that takes over scam calls, keeps scammers engaged, and extracts intelligence for law enforcement.",
     "permissions": [
         "storage"
