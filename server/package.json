@@ -1,0 +1,20 @@
+{
+  "name": "honeypot-server",
+  "version": "3.0.0",
+  "type": "module",
+  "description": "AI Honeypot Backend Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "groq-sdk": "^0.3.2"
+  }
+}
