@@ -10,7 +10,7 @@ Shining Zenith V3 — a complete overhaul of the AI Honeypot anti-scam tool.
 - 📜 **Session History** — tracks all past sessions
 - ⏱️ **Time Wasted Counter** — shows total scammer time wasted
 - 📋 **One-Click Report Export** — formatted for authorities
-- 📋 **One-Click Report Export** — formatted for authorities
+
 - ⚡ **Low Latency** — Optimized streaming audio + fast silence detection (1.2s)
 - 💳 **Credit Card Detection** — Real-time red alerts for financial data
 - 🐍 **Robust Voice Engine** — Switched to Python Edge TTS for reliability
